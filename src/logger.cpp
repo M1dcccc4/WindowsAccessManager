@@ -85,7 +85,7 @@ void Logger::Initialize() {
 }
 
 // 将执行结果打入日志
-// [xxxx-xx-xx xx:xx:xx] User name@local <verb> 'winver' (code: xx)
+// [xxxx-xx-xx xx:xx:xx] <status> user name@domain 'command' (code: xx)
 std::string Logger::Log(std::string& command, LogType logType, const std::string& exitCode)
 {
 	std::stringstream fullLog;

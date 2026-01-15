@@ -23,17 +23,20 @@
 
 2. 编辑wam.ini，添加以下内容：
    ```ini
-   [YourUserName]  # 你的用户名
-   CMD: ls notepad ipconfig ...  # 允许的命令
+   [UserName]                                # 你的用户名
+   trusted = false                           # 需要密码验证
+   allowed = ls, notepad, ipconfig, ...      # 允许的命令
 
    [TrustedUser]
-   ALL                           # 或者全部允许（受信任的情况下）
+   truested = true                           # 受信任用户无需密码认证
+   allowed = ALL                             # 或者全部允许（受信任的情况下）
 ## 免责声明
 > [!CAUTION]
 > 本工具**极其不安全**且**不推荐**在正式工作环境中使用：
 > - 非线程安全
 > - 潜在的命令注入
 > - 编译时需修改头文件
+>
 > 请谨慎，且只给信任的用户使用。
 
 本工具仅供教育用途。未经你所运行系统的所有者同意，请勿使用。使用本工具，你承认使用本工具导致的任何损害（数据丢失、系统崩溃、黑客入侵）均非作者之责任。

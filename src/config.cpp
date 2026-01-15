@@ -1,6 +1,7 @@
 #include "config.h"
 #include "language.h"
 #include <fstream>
+#include <vector>
 #include <sstream>
 #include <algorithm>
 #include <lmcons.h>
@@ -21,10 +22,10 @@ ConfigManager::ConfigManager(const std::string& configPath)
         }
         CloseHandle(hToken);
     }
-    parseConfigFile();
+    GetPermission();
 }
 
-std::string ConfigManager::getCurrentUsername() {
+std::string ConfigManager::GetCurrentUsername() {
     char username[UNLEN + 1];
     DWORD username_len = UNLEN + 1;
     if (GetUserNameA(username, &username_len)) {
@@ -33,8 +34,13 @@ std::string ConfigManager::getCurrentUsername() {
     return "UNKNOWN";
 }
 
-std::string ConfigManager::getConfigPath() {
-    // 使用安全的 getenv 替代方法
+std::vector<std::string> ConfigManager::GetAllowedCommand()
+{
+    return allowedCommands;
+}
+
+std::string ConfigManager::GetConfigPath() {
+    // 使用安全的 Getenv 替代方法
     char* programData = nullptr;
     size_t len = 0;
 
@@ -60,77 +66,10 @@ std::string ConfigManager::getConfigPath() {
     return "wam.ini";
 }
 
-void ConfigManager::parseConfigFile() {
-    userPermissions.clear();
-
-    std::ifstream file(configPath);
-    if (!file.is_open()) {
-        std::cerr << FS1("wam.error.openConfig", configPath) << std::endl;
-        return;
-    }
-
-    std::string line;
-    std::string currentUser;
-
-    while (std::getline(file, line)) {
-        parseConfigLine(line, currentUser);
-    }
-}
-
-void ConfigManager::parseConfigLine(const std::string& line, std::string& currentUser) {
-    std::string trimmed = line;
-
-    // 移除注释
-    size_t commentPos = trimmed.find('#');
-    if (commentPos != std::string::npos) {
-        trimmed = trimmed.substr(0, commentPos);
-    }
-
-    // 修剪空白
-    trimmed.erase(0, trimmed.find_first_not_of(" \t"));
-    trimmed.erase(trimmed.find_last_not_of(" \t") + 1);
-
-    if (trimmed.empty()) return;
-
-    if (trimmed[0] == '[' && trimmed.back() == ']') {
-        currentUser = trimmed.substr(1, trimmed.length() - 2);
-        std::transform(currentUser.begin(), currentUser.end(),
-            currentUser.begin(), ::tolower);
-        userPermissions[currentUser];
-    }
-    else if (!currentUser.empty()) {
-        std::istringstream iss(trimmed);
-        std::string permission;
-        iss >> permission;
-
-        if (permission == "ALL") {
-            userPermissions[currentUser].allowAllCommands = true;
-        }
-        else if (permission == "CMD:") {
-            std::string command;
-            while (iss >> command) {
-                userPermissions[currentUser].allowedCommands.insert(command);
-            }
-        }
-    }
-}
-
-bool ConfigManager::isCommandAllowed(const std::string& username,
-    const std::string& command) {
-    std::string userLower = username;
-    std::transform(userLower.begin(), userLower.end(),
-        userLower.begin(), ::tolower);
-
-    auto it = userPermissions.find(userLower);
-    if (it == userPermissions.end()) {
-        return false;
-    }
-
-    const UserPermission& perm = it->second;
-    if (perm.allowAllCommands) {
+bool ConfigManager::isCommandAllowed(const std::string& command) {
+    if (allowAllCommands) {
         return true;
     }
-
     std::string baseCommand = command;
     size_t spacePos = command.find(' ');
     if (spacePos != std::string::npos) {
@@ -151,39 +90,109 @@ bool ConfigManager::isCommandAllowed(const std::string& username,
     }
 
     // 检查完整命令名
-    if (perm.allowedCommands.find(baseCommand) != perm.allowedCommands.end()) {
+    if (std::find(allowedCommands.begin(),
+        allowedCommands.end(),
+        baseCommand) != allowedCommands.end()) {
         return true;
     }
 
     // 检查不带扩展名的命令名
-    if (perm.allowedCommands.find(commandNoExt) != perm.allowedCommands.end()) {
+    if (std::find(allowedCommands.begin(),
+        allowedCommands.end(),
+        commandNoExt) != allowedCommands.end()) {
         return true;
     }
 
     return false;
 }
 
-std::vector<std::string> ConfigManager::getAllowedCommands(
-    const std::string& username) {
-    std::vector<std::string> commands;
-    std::string userLower = username;
-    std::transform(userLower.begin(), userLower.end(),
-        userLower.begin(), ::tolower);
+bool ConfigManager::isNoPassword()
+{
+    return noPassword;
+}
 
-    auto it = userPermissions.find(userLower);
-    if (it != userPermissions.end()) {
-        const UserPermission& perm = it->second;
-        if (perm.allowAllCommands) {
-            commands.push_back(FS("wam.list.all"));
-        }
-        for (const auto& cmd : perm.allowedCommands) {
-            commands.push_back(cmd);
+
+// 辅助函数：移除空白字符
+void trim(std::string& s) {
+    s.erase(0, s.find_first_not_of(" \t"));
+    s.erase(s.find_last_not_of(" \t") + 1);
+}
+
+int ConfigManager::GetPermission() {
+    std::ifstream file(configPath);
+    if (!file.is_open()) {
+        std::cerr << FS1("wam.error.openConfig", configPath) << std::endl;
+        return 1;
+    }
+
+    std::string line;
+    bool foundUser = false;
+    std::string userName = ConfigManager::GetCurrentUsername();
+    // 查找用户段
+    while (std::getline(file, line)) {
+        if (line.find("[" + userName + "]") != std::string::npos) {
+            foundUser = true;
+            break;
         }
     }
-    return commands;
-}
 
-void ConfigManager::reloadConfig() {
-    parseConfigFile();
-}
+    if (!foundUser) return 1;
 
+    // 读取用户配置直到下一个用户段或文件结束
+    while (std::getline(file, line)) {
+        // 如果遇到下一个用户段，停止读取
+        if (!line.empty() && line[0] == '[') {
+            break;
+        }
+
+        // 移除注释
+        size_t commentPos = line.find('#');
+        if (commentPos != std::string::npos) {
+            line = line.substr(0, commentPos);
+        }
+
+        // 修剪空白
+        trim(line);
+        if (line.empty()) continue;
+
+        // 解析键值对
+        size_t equalPos = line.find('=');
+        if (equalPos != std::string::npos) {
+            std::string key = line.substr(0, equalPos);
+            std::string value = line.substr(equalPos + 1);
+            trim(key);
+            trim(value);
+
+            if (key == "trusted") {
+                noPassword = (value == "true");
+            }
+            else if (key == "allowed") {
+                if (value == "ALL") {
+                    allowAllCommands = true;
+                }
+                else {
+                    // 用逗号分割多个命令
+                    std::stringstream ss(value);
+                    std::string command;
+                    while (std::getline(ss, command, ',')) {
+                        trim(command);
+                        if (!command.empty()) {
+                            allowedCommands.push_back(command);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 输出结果
+    std::cout << "Allowed commands:" << std::endl;
+    for (const std::string& cmd : allowedCommands) {
+        std::cout << cmd << std::endl;
+
+    }
+    std::cout << "Allow all commands: " << allowAllCommands << std::endl;
+    std::cout << "No password: " << noPassword << std::endl;
+
+    return 0;
+}

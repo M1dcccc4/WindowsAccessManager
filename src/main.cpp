@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <wincrypt.h>
 #include <locale>
+#include <conio.h>
 #include <cwchar>
 #pragma comment(lib, "crypt32.lib")
 
@@ -316,7 +317,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-	std::string configPath = ConfigManager::getConfigPath();
+	std::string configPath = ConfigManager::GetConfigPath();
 
 	// 解析命令行参数
 	for (int i = 1; i < argc; i++) {
@@ -332,8 +333,8 @@ int main(int argc, char* argv[]) {
 		}
 		else if (arg == "-l" || arg == "--list") {
 			ConfigManager config(configPath);
-			std::string username = config.getCurrentUsername();
-			auto commands = config.getAllowedCommands(username);
+			std::string username = config.GetCurrentUsername();
+			auto commands = config.GetAllowedCommand();
 
 			std::cout << FS1("wam.list.config", configPath) << std::endl;
 			std::cout << FS1("wam.list.user", username) << std::endl;
@@ -375,11 +376,11 @@ int main(int argc, char* argv[]) {
 		}
 
 		ConfigManager config(configPath);
-		std::string username = config.getCurrentUsername();
+		std::string username = config.GetCurrentUsername();
 		std::string command = args[0];
 
 		// 检查权限
-		if (!config.isCommandAllowed(username, command)) {
+		if (!config.isCommandAllowed(command)) {
 			LD(command);
 			std::cerr << FS2("wam.error.noPermission", username, command) << std::endl;
 			std::cerr << FS1("wam.error.checkConfig", configPath) << std::endl;
@@ -416,15 +417,18 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if (!VerifyPassword()) {
-			LB(command);
-			std::cout << FS("wam.error.verifyFailed") << std::endl;
-			return 1;
+		if (!config.isNoPassword()) {
+
+			if (!VerifyPassword()) {
+				LB(command);
+				std::cout << FS("wam.error.verifyFailed") << std::endl;
+				return 1;
+			}
 		}
 		else
+			// 执行命令
+			return RunElevatedCommand(command, parameters) ? 0 : 1;
 
-		// 执行命令
-		return RunElevatedCommand(command, parameters) ? 0 : 1;
 	}
 
 	ShowHelp();
