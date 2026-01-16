@@ -76,6 +76,7 @@ namespace {
 }
 
 #define VP(pwd) PwdManager::Instance().Verify(::N2W(::GetName()).c_str(), ::N2W(::GetDomain()).c_str(), pwd)
+#define NP Logger::Instance().AllowNoPassword(Logger::Instance().GetLastAllowed())
 
 // 全局变量
 static bool isSilent{ false };
@@ -417,20 +418,28 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if (!config.isNoPassword()) {
+		if (!config.isNoPassword() && !NP) {
 
 			if (!VerifyPassword()) {
 				LB(command);
 				std::cout << FS("wam.error.verifyFailed") << std::endl;
 				return 1;
 			}
+			else {
+				// 执行命令
+				return RunElevatedCommand(command, parameters) ? 0 : 1;
+			}
+
 		}
-		else
-			// 执行命令
+		else {
+			// 执行命令（无密码）
+			LA(command);
 			return RunElevatedCommand(command, parameters) ? 0 : 1;
+		}
 
 	}
-
-	ShowHelp();
-	return 1;
+	else {
+		ShowHelp();
+		return 1;
+	}
 }

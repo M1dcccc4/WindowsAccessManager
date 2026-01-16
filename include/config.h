@@ -5,9 +5,6 @@
 #include <windows.h>
 #include "language.h"
 
-struct UserPermission {
-};
-
 class ConfigManager {
 private:
     std::string configPath;

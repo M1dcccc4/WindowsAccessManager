@@ -184,15 +184,5 @@ int ConfigManager::GetPermission() {
             }
         }
     }
-
-    // Êä³ö½á¹û
-    std::cout << "Allowed commands:" << std::endl;
-    for (const std::string& cmd : allowedCommands) {
-        std::cout << cmd << std::endl;
-
-    }
-    std::cout << "Allow all commands: " << allowAllCommands << std::endl;
-    std::cout << "No password: " << noPassword << std::endl;
-
     return 0;
 }
