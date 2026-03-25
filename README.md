@@ -7,8 +7,9 @@
 使用 WindowsAPI 中 `ShellExecuteEx` 创建独立 shell 进程，执行提权的 powershell 脚本，有以下选项可选：
 ```shell
 -h --help       显示帮助
--v --version    显示版本
--s --silent     静默执行
+-v --version    显示wam的版本
+-l --list       列出用户允许的命令
+-s --silent     静默执行命令
 ```
 
 ## 功能特性
