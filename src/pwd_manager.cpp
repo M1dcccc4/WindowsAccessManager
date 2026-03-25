@@ -16,7 +16,7 @@ bool PwdManager::Verify(LPCWSTR username, LPCWSTR domain, LPCWSTR password)
     HANDLE hToken = NULL;
 
     // 使用 LogonUser 获取用户令牌
-    if (!LogonUser(username, domain, password,
+    if (!LogonUserW(username, domain, password,
         LOGON32_LOGON_INTERACTIVE,  // 登录类型
         LOGON32_PROVIDER_DEFAULT,   // 登录提供者
         &hToken))

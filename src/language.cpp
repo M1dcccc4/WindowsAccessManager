@@ -104,17 +104,10 @@ std::string LanguageManager::format(const std::string& key, const std::vector<st
     for (size_t i = 0; i < args.size(); i++) {
         std::string placeholder = "%s";
 
-        // 检查是否有 %d 占位符
-        size_t dPos = message.find("%d");
         size_t sPos = message.find("%s");
 
-        // 优先使用 %d 占位符（如果存在且是第一个参数）
-        if (i == 0 && dPos != std::string::npos && (sPos == std::string::npos || dPos < sPos)) {
-            placeholder = "%d";
-        }
-
         size_t pos = message.find(placeholder);
-        while (pos != std::string::npos) {
+        if (pos != std::string::npos) {
             message.replace(pos, placeholder.length(), args[i]);
             pos = message.find(placeholder, pos + args[i].length());
         }

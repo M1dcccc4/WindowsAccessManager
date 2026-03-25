@@ -14,8 +14,10 @@
 #include <locale>
 #include <conio.h>
 #include <cwchar>
+#include <shellapi.h>
 
 #pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "shell32.lib")
 
 std::string GetName() {
 	std::string userName{ Logger::Instance().GetUserAtDomain() };
@@ -384,7 +386,8 @@ int main(int argc, char* argv[]) {
 				baseCommand = baseCommand.substr(lastSlash + 1);
 			}
 
-			std::cout << FS1("wam.config.cmdLine", baseCommand) << std::endl;
+			std::cout << FS("wam.config.cmdLine1") << std::endl;
+			std::cout << FS1("wam.config.cmdLine2", baseCommand) << std::endl;
 			std::cout << FS("wam.config.separator") << std::endl;
 
 			return 1;
