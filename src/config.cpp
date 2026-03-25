@@ -40,7 +40,6 @@ std::vector<std::string> ConfigManager::GetAllowedCommand()
 }
 
 std::string ConfigManager::GetConfigPath() {
-    // 使用安全的 Getenv 替代方法
     char* programData = nullptr;
     size_t len = 0;
 

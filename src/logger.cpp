@@ -46,7 +46,7 @@ std::string Logger::GetUserAtDomain() {                                     // T
 	DWORD size = sizeof(buffer);											//  
 	if (GetUserNameExA(NameSamCompatible, buffer, &size)) {					//  _Success_(return != 0)
 		userName = buffer;													//  BOOLEAN
-		size_t backslashPos = userName.find('\\');							//  SEC_ENTRY  <------ 我把这里注释了才不报错，其余的函数都是如此，不知道是有意还是无意
+		size_t backslashPos = userName.find('\\');							//  SEC_ENTRY  <------ 把这里注释了才不报错，其余的函数都是如此，不知道是有意还是无意
 																			//  GetUserNameExW(
 		if (backslashPos != std::string::npos) {							//		 _In_ EXTENDED_NAME_FORMAT NameFormat,
 			domain = userName.substr(0, backslashPos);						//      _Out_writes_to_opt_(*nSize, *nSize) LPWSTR lpNameBuffer,
@@ -144,10 +144,7 @@ std::string Logger::GetLastAllowed() {
 			size_t lcolPos = line.find("[");
 			size_t rcolPos = line.find("]");
 			time = line.substr(lcolPos + 1).substr(0, rcolPos - 1);
-		}
-		else {
-			continue;
-		}
+		} else continue;
 	}
 
 	return time;
@@ -165,10 +162,9 @@ bool Logger::AllowNoPassword(std::string timeStr)
 	sss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
 	std::time_t prev = std::mktime(&tm);
 	double time{ std::difftime(prev, last) };
-	if (time / 60 <= 5.0) {
+	if (time / 60 <= 5.0) 
 		return true;
-	}
-	else {
+	else 
 		return false;
-	}
+
 }

@@ -14,68 +14,67 @@
 #include <locale>
 #include <conio.h>
 #include <cwchar>
+
 #pragma comment(lib, "crypt32.lib")
 
-namespace {
-	std::string GetName() {
-		std::string userName{ Logger::Instance().GetUserAtDomain() };
-		std::string username;
-		size_t backslashPos = userName.find('@');
+std::string GetName() {
+	std::string userName{ Logger::Instance().GetUserAtDomain() };
+	std::string username;
+	size_t backslashPos = userName.find('@');
 
-		if (backslashPos != std::string::npos) {
-			username = userName.substr(0, backslashPos);
-			return username;
-		}
-		return "UNKNOWN";
+	if (backslashPos != std::string::npos) {
+		username = userName.substr(0, backslashPos);
+		return username;
+	}
+	return "UNKNOWN";
+};
+
+std::string GetDomain() {
+	std::string userName{ Logger::Instance().GetUserAtDomain() };
+	std::string domain;
+	size_t backslashPos = userName.find('@');
+
+	if (backslashPos != std::string::npos) {
+		domain = userName.substr(backslashPos + 1);
+		return domain;
+	}
+	return "UNKNOWN";
+};
+
+std::wstring N2W(const std::string& narrowStr) {
+	if (narrowStr.empty()) return L"";
+
+	std::vector<wchar_t> buffer(narrowStr.size() * sizeof(wchar_t) + 1);
+	const char* pSrc = narrowStr.c_str();
+	wchar_t* pDest = buffer.data();
+	std::mbstate_t state = std::mbstate_t();
+
+	size_t converted = std::mbsrtowcs(pDest, &pSrc, buffer.size(), &state);
+	if (converted == static_cast<size_t>(-1)) {
+		return L"";
 	}
 
-	std::string GetDomain() {
-		std::string userName{ Logger::Instance().GetUserAtDomain() };
-		std::string domain;
-		size_t backslashPos = userName.find('@');
-
-		if (backslashPos != std::string::npos) {
-			domain = userName.substr(backslashPos + 1);
-			return domain;
-		}
-		return "UNKNOWN";
-	}
-
-	std::wstring N2W(const std::string& narrowStr) {
-		if (narrowStr.empty()) return L"";
-
-		std::vector<wchar_t> buffer(narrowStr.size() * sizeof(wchar_t) + 1);
-		const char* pSrc = narrowStr.c_str();
-		wchar_t* pDest = buffer.data();
-		std::mbstate_t state = std::mbstate_t();
-
-		size_t converted = std::mbsrtowcs(pDest, &pSrc, buffer.size(), &state);
-		if (converted == static_cast<size_t>(-1)) {
-			return L"";
-		}
-
-		return std::wstring(buffer.data());
-	}
-
-	std::string W2N(const std::wstring& wideStr) {
-		if (wideStr.empty()) return "";
-
-		std::vector<char> buffer(wideStr.size() * MB_CUR_MAX + 1);
-		const wchar_t* pSrc = wideStr.c_str();
-		char* pDest = buffer.data();
-		std::mbstate_t state = std::mbstate_t();
-
-		size_t converted = std::wcsrtombs(pDest, &pSrc, buffer.size(), &state);
-		if (converted == static_cast<size_t>(-1)) {
-			return "";
-		}
-
-		return std::string(buffer.data());
-	}
-
+	return std::wstring(buffer.data());
 }
 
-#define VP(pwd) PwdManager::Instance().Verify(::N2W(::GetName()).c_str(), ::N2W(::GetDomain()).c_str(), pwd)
+std::string W2N(const std::wstring& wideStr) {
+	if (wideStr.empty()) return "";
+
+	std::vector<char> buffer(wideStr.size() * MB_CUR_MAX + 1);
+	const wchar_t* pSrc = wideStr.c_str();
+	char* pDest = buffer.data();
+	std::mbstate_t state = std::mbstate_t();
+
+	size_t converted = std::wcsrtombs(pDest, &pSrc, buffer.size(), &state);
+	if (converted == static_cast<size_t>(-1)) {
+		return "";
+	}
+
+	return std::string(buffer.data());
+}
+
+
+#define VP(pwd) PwdManager::Instance().Verify(N2W(GetName()).c_str(), N2W(GetDomain()).c_str(), pwd)
 #define NP Logger::Instance().AllowNoPassword(Logger::Instance().GetLastAllowed())
 
 // 全局变量
@@ -111,18 +110,15 @@ std::wstring NoEcho() {
 			std::cout << FS("wam.error.verifyCanceled");
 			password.clear();
 			exit(1);
-		}
-		else if (ch == '\r' || ch == '\n') {
+		} else if (ch == '\r' || ch == '\n') {
 			std::cout << std::endl;
 			break;
-		}
-		else if (ch == '\b') {
+		} else if (ch == '\b') {
 			if (!password.empty())
 			{
 				password.pop_back();
 			}
-		}
-		else if (ch >= 32 && ch <= 126) {  // 可打印字符
+		} else if (ch >= 32 && ch <= 126) {  // 可打印字符
 			password.push_back(ch);
 		}
 	}
@@ -135,20 +131,12 @@ bool VerifyPassword() {
 		std::cout << FS("wam.error.retry") << std::endl;
 		if (!VP(NoEcho().c_str())) {
 			std::cout << FS("wam.error.retry") << std::endl;
-			if (!VP(NoEcho().c_str())) {
-				return false;
-			}
-			else {
-				return true;
-			}
+			if (!VP(NoEcho().c_str())) return false;
+			else return true;
 		}
-		else {
-			return true;
-		}
+		else return true;
 	}
-	else {
-		return true;
-	}
+	else return true;
 }
 
 // 老版使用临时脚本文件
@@ -277,9 +265,8 @@ bool RunElevatedCommand(const std::string& command, const std::string& params = 
 	shExInfo.hInstApp = 0;
 
 	LA(fullCmd);
-	if (!isSilent) {
+	if (!isSilent)
 		std::cout << FS1("wam.exec.running", fullCmd) << std::endl;
-	}
 
 	if (ShellExecuteExA(&shExInfo)) {
 		WaitForSingleObject(shExInfo.hProcess, INFINITE);
@@ -289,18 +276,15 @@ bool RunElevatedCommand(const std::string& command, const std::string& params = 
 		CloseHandle(shExInfo.hProcess);
 
 		LE(fullCmd, std::to_string(exitCode));
-		if (!isSilent) {
+		if (!isSilent)
 			std::cout << FS1("wam.exec.completed", std::to_string(exitCode)) << std::endl;
-		}
 		return exitCode == 0;
-	}
-	else {
+	} else {
 		DWORD error = GetLastError();
 		if (error == ERROR_CANCELLED) {
 			LC(fullCmd);
 			std::cerr << FS("wam.error.UACcanceled") << "\n";
-		}
-		else {
+		} else {
 			LF(fullCmd);
 			std::cerr << FS1("wam.error.commandFailed", std::to_string(error)) << "\n";
 		}
@@ -327,12 +311,10 @@ int main(int argc, char* argv[]) {
 		if (arg == "-h" || arg == "--help") {
 			ShowHelp();
 			return 0;
-		}
-		else if (arg == "-v" || arg == "--version") {
+		} else if (arg == "-v" || arg == "--version") {
 			ShowVersion();
 			return 0;
-		}
-		else if (arg == "-l" || arg == "--list") {
+		} else if (arg == "-l" || arg == "--list") {
 			ConfigManager config(configPath);
 			std::string username = config.GetCurrentUsername();
 			auto commands = config.GetAllowedCommand();
@@ -344,15 +326,14 @@ int main(int argc, char* argv[]) {
 			if (commands.empty()) {
 				std::cout << FS("wam.list.noPermission") << std::endl;
 				std::cout << "\n" << FS("wam.list.editHint") << std::endl;
-			}
-			else {
+			} else {
 				for (const auto& cmd : commands) {
 					std::cout << "  " << cmd << std::endl;
 				}
 			}
 			return 0;
-		}
-		else if (arg == "-s" || arg == "--silent") {
+
+		} else if (arg == "-s" || arg == "--silent") {
 			std::cout << FS("wam.exec.silent") << std::endl;
 			isSilent = true;
 		}
@@ -424,21 +405,18 @@ int main(int argc, char* argv[]) {
 				LB(command);
 				std::cout << FS("wam.error.verifyFailed") << std::endl;
 				return 1;
-			}
-			else {
+			} else {
 				// 执行命令
 				return RunElevatedCommand(command, parameters) ? 0 : 1;
 			}
 
-		}
-		else {
+		} else {
 			// 执行命令（无密码）
 			LA(command);
 			return RunElevatedCommand(command, parameters) ? 0 : 1;
 		}
 
-	}
-	else {
+	} else {
 		ShowHelp();
 		return 1;
 	}
