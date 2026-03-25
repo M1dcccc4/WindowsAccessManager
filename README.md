@@ -11,6 +11,7 @@
 -l --list       列出用户允许的命令
 -s --silent     静默执行命令
 ```
+会在 `\ProgramData\wam\log\log.txt` 中将用户的详细使用记录写入日志
 
 ## 功能特性
 
