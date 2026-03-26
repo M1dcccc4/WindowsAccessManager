@@ -4,8 +4,7 @@
 
 enum class LogType {
 	ALLOW,
-	ALLOWNPWD,
-	BLOCK,
+	BYPASS,
 	CANCEL,
 	DENY,
 	EXIT,
@@ -30,8 +29,7 @@ private:
 
 
 #define LA(s) Logger::Instance().Log(s, LogType::ALLOW)
-#define LANP(s) Logger::Instance().Log(s, LogType::ALLOWNPWD)
-#define LB(s) Logger::Instance().Log(s, LogType::BLOCK)
+#define LB(s) Logger::Instance().Log(s, LogType::BYPASS)
 #define LC(s) Logger::Instance().Log(s, LogType::CANCEL)
 #define LD(s) Logger::Instance().Log(s, LogType::DENY)
 #define LE(s, i) Logger::Instance().Log(s, LogType::EXIT, i)

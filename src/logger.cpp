@@ -89,8 +89,7 @@ std::string Logger::Log(std::string& command, LogType logType, const std::string
 	std::stringstream fullLog;
 	std::vector<std::string> status {
 		"<Allowed>",
-		"<Allowed(No password)>"
-		"<Blocked>",
+		"<Bypass>",
 		"<Canceled>",
 		"<Denied>",
 		"<Exited>",
@@ -134,7 +133,6 @@ std::string Logger::GetLastAllowed() {
 		}
 	}
 
-	// 现在 pos 指向第 N+1 行的开始位置（或文件开始）
 	// 读取剩余的所有行
 	file.seekg(pos + 1, std::ios::beg);
 	std::string userAtDomain{ GetUserAtDomain() };
@@ -152,6 +150,8 @@ std::string Logger::GetLastAllowed() {
 
 bool Logger::AllowNoPassword(std::string timeStr)
 {
+	if (timeStr == "1970-01-01 00:00:00")
+		return false;
 	std::tm tm = {};
 	std::stringstream ss(timeStr);
 	std::stringstream sss(GetTime());

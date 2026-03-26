@@ -46,35 +46,26 @@ std::string GetDomain() {
 std::wstring N2W(const std::string& narrowStr) {
 	if (narrowStr.empty()) return L"";
 
-	std::vector<wchar_t> buffer(narrowStr.size() * sizeof(wchar_t) + 1);
-	const char* pSrc = narrowStr.c_str();
-	wchar_t* pDest = buffer.data();
-	std::mbstate_t state = std::mbstate_t();
+	// 获取所需缓冲区大小（以字符为单位）
+	int len = MultiByteToWideChar(CP_ACP, 0, narrowStr.c_str(), -1, nullptr, 0);
+	if (len <= 0) return L"";
 
-	size_t converted = std::mbsrtowcs(pDest, &pSrc, buffer.size(), &state);
-	if (converted == static_cast<size_t>(-1)) {
-		return L"";
-	}
-
+	std::vector<wchar_t> buffer(len);
+	MultiByteToWideChar(CP_ACP, 0, narrowStr.c_str(), -1, buffer.data(), len);
 	return std::wstring(buffer.data());
 }
 
 std::string W2N(const std::wstring& wideStr) {
 	if (wideStr.empty()) return "";
 
-	std::vector<char> buffer(wideStr.size() * MB_CUR_MAX + 1);
-	const wchar_t* pSrc = wideStr.c_str();
-	char* pDest = buffer.data();
-	std::mbstate_t state = std::mbstate_t();
+	// 获取所需缓冲区大小（以字节为单位）
+	int len = WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+	if (len <= 0) return "";
 
-	size_t converted = std::wcsrtombs(pDest, &pSrc, buffer.size(), &state);
-	if (converted == static_cast<size_t>(-1)) {
-		return "";
-	}
-
+	std::vector<char> buffer(len);
+	WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, buffer.data(), len, nullptr, nullptr);
 	return std::string(buffer.data());
 }
-
 
 #define VP(pwd) PwdManager::Instance().Verify(N2W(GetName()).c_str(), N2W(GetDomain()).c_str(), pwd)
 #define NP Logger::Instance().AllowNoPassword(Logger::Instance().GetLastAllowed())
@@ -141,95 +132,6 @@ bool VerifyPassword() {
 	else return true;
 }
 
-// 老版使用临时脚本文件
-//bool runElevatedCommand(const std::string& command, const std::string& params = "") {
-//    std::string fullCmd = command;
-//    if (!params.empty()) {
-//        fullCmd += " " + params;
-//    }
-//
-//    // 获取当前工作目录
-//    char currentDir[MAX_PATH];
-//    GetCurrentDirectoryA(MAX_PATH, currentDir);
-//
-//    // 构建 PowerShell 脚本文件
-//    char tempPath[MAX_PATH];
-//    GetTempPathA(MAX_PATH, tempPath);
-//
-//    std::string psScript = std::string(tempPath) + "wam_exec_" + std::to_string(GetCurrentProcessId()) + ".ps1";
-//
-//    // 创建 PowerShell 脚本 - 直接在 PowerShell 中执行命令
-//    std::ofstream script(psScript);
-//    script << "# wam 临时执行脚本\n";
-//    script << "# 直接在 PowerShell 中执行命令\n";
-//    if (!isSilent) {
-//        script << "Write-Host \"" << FS1("wam.exec.cwd", currentDir) << "\" -ForegroundColor Cyan\n";
-//        script << "Write-Host \"" << FS1("wam.exec.executing", fullCmd) << "\" -ForegroundColor Cyan\n";
-//        script << "Write-Host \"\"\n";
-//    }
-//    script << "Set-Location -Path \"" << currentDir << "\"\n";
-//    script << "Invoke-Expression -Command \"" << fullCmd << "\"\n";
-//    script << "Write-Host \"\"\n";
-//    script << "Write-Host" << " \"====================^^Cmd:\"" << fullCmd << "\"^^=====================\" -ForegroundColor Gray\n";
-//    if (!isSilent) {
-//        script << "Read-Host \"" << FS("wam.exec.pause") << "\"\n";
-//    }
-//    script << "Exit-PSSession";
-//    script.close();
-//
-//
-//
-//    // 执行 PowerShell 脚本
-//    std::string finalParams = "-ExecutionPolicy Bypass -File \"" + psScript + "\"";
-//
-//    SHELLEXECUTEINFOA shExInfo = { 0 };
-//    shExInfo.cbSize = sizeof(shExInfo);
-//    shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-//    shExInfo.hwnd = 0;
-//    shExInfo.lpVerb = "runas";
-//    shExInfo.lpFile = "powershell.exe";
-//    shExInfo.lpParameters = finalParams.c_str();
-//    shExInfo.lpDirectory = 0;
-//    shExInfo.nShow = SW_SHOWNORMAL;
-//    shExInfo.hInstApp = 0;
-//
-//    LA(fullCmd);
-//    if (!isSilent) {
-//        std::cout << FS1("wam.exec.running", fullCmd) << std::endl;
-//    }
-//
-//    if (ShellExecuteExA(&shExInfo)) {
-//        WaitForSingleObject(shExInfo.hProcess, INFINITE);
-//
-//        DWORD exitCode;
-//        GetExitCodeProcess(shExInfo.hProcess, &exitCode);
-//        CloseHandle(shExInfo.hProcess);
-//
-//        // 删除临时文件
-//        DeleteFileA(psScript.c_str());
-//
-//        LE(fullCmd, std::to_string(exitCode));
-//        if (!isSilent) {
-//            std::cout << FS1("wam.exec.completed", std::to_string(exitCode)) << std::endl;
-//        }
-//        return exitCode == 0;
-//    }
-//    else {
-//        DWORD error = GetLastError();
-//        if (error == ERROR_CANCELLED) {
-//            LC(fullCmd);
-//            std::cerr << FS("wam.error.UACcanceled") << "\n";
-//        }
-//        else {
-//            LF(fullCmd);
-//            std::cerr << FS1("wam.error.commandFailed", std::to_string(error)) << "\n";
-//        }
-//        // 如果失败，清理临时文件
-//        DeleteFileA(psScript.c_str());
-//        return false;
-//    }
-//}
-
 bool RunElevatedCommand(const std::string& command, const std::string& params = "") {
 	std::string fullCmd = command;
 	if (!params.empty()) {
@@ -266,7 +168,7 @@ bool RunElevatedCommand(const std::string& command, const std::string& params = 
 	shExInfo.nShow = SW_SHOWNORMAL;
 	shExInfo.hInstApp = 0;
 
-	LA(fullCmd);
+	//LA(fullCmd);
 	if (!isSilent)
 		std::cout << FS1("wam.exec.running", fullCmd) << std::endl;
 
@@ -328,6 +230,8 @@ int main(int argc, char* argv[]) {
 			if (commands.empty()) {
 				std::cout << FS("wam.list.noPermission") << std::endl;
 				std::cout << "\n" << FS("wam.list.editHint") << std::endl;
+			} else if (commands[0] == "ALL") {
+				std::cout << "      " << FS("wam.list.all") << std::endl;
 			} else {
 				for (const auto& cmd : commands) {
 					std::cout << "  " << cmd << std::endl;
@@ -405,17 +309,18 @@ int main(int argc, char* argv[]) {
 		if (!config.isNoPassword() && !NP) {
 
 			if (!VerifyPassword()) {
-				LB(command);
+				LD(command);
 				std::cout << FS("wam.error.verifyFailed") << std::endl;
 				return 1;
 			} else {
 				// 执行命令
+				LA(command);
 				return RunElevatedCommand(command, parameters) ? 0 : 1;
 			}
 
 		} else {
 			// 执行命令（无密码）
-			LA(command);
+			LB(command);
 			return RunElevatedCommand(command, parameters) ? 0 : 1;
 		}
 

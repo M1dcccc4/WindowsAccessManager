@@ -36,7 +36,10 @@ std::string ConfigManager::GetCurrentUsername() {
 
 std::vector<std::string> ConfigManager::GetAllowedCommand()
 {
-    return allowedCommands;
+    if (allowAllCommands)
+        return {"ALL"};
+    else
+        return allowedCommands;
 }
 
 std::string ConfigManager::GetConfigPath() {

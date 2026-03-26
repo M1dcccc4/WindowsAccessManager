@@ -53,9 +53,9 @@ void LanguageManager::loadLanguageFile() {
         std::string line;
         while (std::getline(file, line)) {
             // 跳过注释行和空行
-            if (line.empty() || line[0] == '#') {
+            if (line.empty() || line[0] == '#')
                 continue;
-            }
+
 
             // 查找等号
             size_t eqPos = line.find('=');
