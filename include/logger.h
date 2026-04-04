@@ -20,6 +20,7 @@ public:
 	std::string GetUserAtDomain();
 	std::string GetLastAllowed();
 	bool AllowNoPassword(std::string timeStr);
+	void RefreshTimestamp(std::string timeStr);
 	static void Initialize();
 private:
 	static std::ofstream logFile;

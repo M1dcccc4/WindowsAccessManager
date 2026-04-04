@@ -66,19 +66,17 @@ void Logger::Initialize() {
 	if (_dupenv_s(&programData, &len, "PROGRAMDATA") == 0 && programData != nullptr) {
 		std::string dirPath = std::string(programData) + "\\wam\\log";
 		CreateDirectoryA(dirPath.c_str(), NULL);
-		// std::cout << dirPath << std::endl;
-		logPath = dirPath + "\\log.txt";
+		logPath = dirPath;
 		free(programData);
 	}
 
 	if (logPath.empty()) {
-		std::cout << "emp" << std::endl;
-		logPath = ".\\log.txt";
+		logPath = ".\\";
 	}
 	Logger::filePath = logPath;
-	Logger::logFile.open(logPath, std::ios::app);
+	Logger::logFile.open(logPath + "\\log.txt", std::ios::app);
 	if (!Logger::Instance().logFile.is_open()) {
-		std::cerr << FS("wam.error.openLog") << std::endl;
+		std::cerr << FS1("wam.error.openLog", logPath + "\\log.txt") << std::endl;
 	}
 }
 
@@ -106,45 +104,18 @@ std::string Logger::Log(std::string& command, LogType logType, const std::string
 }
 
 std::string Logger::GetLastAllowed() {
-	std::ifstream file(Logger::Instance().filePath, std::ios::ate | std::ios::binary);
+	std::string path{ Logger::Instance().filePath + "\\timestamp" };
+	std::ifstream file(path);
 	std::string line;
 	std::string time{ "1970-01-01 00:00:00" };
 
 	if (!file.is_open()) {
-		std::cerr << FS("wam.error.openLog") << std::endl;
 		return time;
 	}
 
-	// 获取文件大小
-	std::streamsize size = file.tellg();
-	std::streamsize pos = size;
-	int newlinesFound = 0;
-
-	// 从后往前读取
-	while (pos > 0) {
-		file.seekg(--pos, std::ios::beg);
-		char c;
-		file.get(c);
-
-		if (c == '\n') {
-			if (pos != size - 1) {  // 忽略最后一个字符就是换行的情况
-				newlinesFound++;
-			}
-		}
-	}
-
-	// 读取剩余的所有行
-	file.seekg(pos + 1, std::ios::beg);
-	std::string userAtDomain{ GetUserAtDomain() };
-	while (std::getline(file, line)) {
-		if ((line.find("user " + userAtDomain) != std::string::npos) &&
-			(line.find("<Allowed>") != std::string::npos)) {
-			size_t lcolPos = line.find("[");
-			size_t rcolPos = line.find("]");
-			time = line.substr(lcolPos + 1).substr(0, rcolPos - 1);
-		} else continue;
-	}
-
+	time.clear();
+	
+	getline(file, time);
 	return time;
 }
 
@@ -168,3 +139,76 @@ bool Logger::AllowNoPassword(std::string timeStr)
 		return false;
 
 }
+
+void Logger::RefreshTimestamp(std::string timeStr)
+{
+	std::cout << timeStr << std::endl;
+	//timeStamp << timeStr;
+}
+
+
+//std::string Logger::GetLastAllowed() {
+//	std::string path{ Logger::Instance().filePath + "\\log.txt" };
+//	std::cout << path << std::endl;
+//	std::ifstream file(path, std::ios::ate | std::ios::binary);
+//	std::string line;
+//	std::string time{ "1970-01-01 00:00:00" };
+//
+//	if (!file.is_open()) {
+//		std::cerr << FS1("wam.error.openLog", path) << std::endl;
+//		return time;
+//	}
+//
+//	// 获取文件大小
+//	std::streamsize size = file.tellg();
+//	std::streamsize pos = size;
+//	int newlinesFound = 0;
+//
+//	// 从后往前读取
+//	while (pos > 0) {
+//		file.seekg(--pos, std::ios::beg);
+//		char c;
+//		file.get(c);
+//
+//		if (c == '\n') {
+//			if (pos != size - 1) {  // 忽略最后一个字符就是换行的情况
+//				newlinesFound++;
+//			}
+//		}
+//	}
+//
+//	// 读取剩余的所有行
+//	file.seekg(pos + 1, std::ios::beg);
+//	std::string userAtDomain{ GetUserAtDomain() };
+//	while (std::getline(file, line)) {
+//		if ((line.find("user " + userAtDomain) != std::string::npos) &&
+//			(line.find("<Allowed>") != std::string::npos)) {
+//			size_t lcolPos = line.find("[");
+//			size_t rcolPos = line.find("]");
+//			time = line.substr(lcolPos + 1).substr(0, rcolPos - 1);
+//		} else continue;
+//	}
+//
+//	return time;
+//}
+//
+//bool Logger::AllowNoPassword(std::string timeStr)
+//{
+//	if (timeStr == "1970-01-01 00:00:00")
+//		return false;
+//	std::tm tm = {};
+//	std::stringstream ss(timeStr);
+//	std::stringstream sss(GetTime());
+//	// 按照指定格式解析时间
+//	ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+//	// 转换为 time_t
+//	std::time_t last = std::mktime(&tm);
+//	sss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+//	std::time_t prev = std::mktime(&tm);
+//	double time{ std::difftime(prev, last) };
+//	if (time / 60 <= 5.0) 
+//		return true;
+//	else 
+//		return false;
+//
+//}

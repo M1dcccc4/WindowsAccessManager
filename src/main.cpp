@@ -14,7 +14,7 @@
 #include <locale>
 #include <conio.h>
 #include <cwchar>
-#include <shellapi.h>
+#include <functional>
 
 #pragma comment(lib, "crypt32.lib")
 #pragma comment(lib, "shell32.lib")
@@ -66,12 +66,12 @@ std::string W2N(const std::wstring& wideStr) {
 	WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, buffer.data(), len, nullptr, nullptr);
 	return std::string(buffer.data());
 }
-
 #define VP(pwd) PwdManager::Instance().Verify(N2W(GetName()).c_str(), N2W(GetDomain()).c_str(), pwd)
 #define NP Logger::Instance().AllowNoPassword(Logger::Instance().GetLastAllowed())
 
 // 全局变量
 static bool isSilent{ false };
+static bool ignoreTimestamp{ false };
 
 void ShowHelp() {
 	std::cout << FS("wam.general.usage") << "\n\n";
@@ -99,7 +99,7 @@ std::wstring NoEcho() {
 	while (true) {
 		ch = _getwch();
 		if (ch == 3) {
-			std::cout << "^C" << std::endl;
+			std::cout << "\n^C" << std::endl;
 			std::cout << FS("wam.error.verifyCanceled");
 			password.clear();
 			exit(1);
@@ -242,6 +242,13 @@ int main(int argc, char* argv[]) {
 		} else if (arg == "-s" || arg == "--silent") {
 			std::cout << FS("wam.exec.silent") << std::endl;
 			isSilent = true;
+		} else if (arg == "-S" || arg == "--Silent") {
+			isSilent = true;
+		} else if (arg == "-f" || arg == "--forget") {
+			std::cout << "Forgetting timestamp" << std::endl;
+			ignoreTimestamp = true;
+		} else if (arg == "-F" || arg == "--Forget") {
+			std::cout << "Cleaning timestamp" << std::endl;
 		}
 	}
 
@@ -306,7 +313,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if (!config.isNoPassword() && !NP) {
+		if (!config.isNoPassword() && !NP && !ignoreTimestamp) {
 
 			if (!VerifyPassword()) {
 				LD(command);
@@ -315,6 +322,7 @@ int main(int argc, char* argv[]) {
 			} else {
 				// 执行命令
 				LA(command);
+				Logger::Instance().RefreshTimestamp(Logger::Instance().GetTime());
 				return RunElevatedCommand(command, parameters) ? 0 : 1;
 			}
 
