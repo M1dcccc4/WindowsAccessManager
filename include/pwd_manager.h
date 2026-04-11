@@ -1,5 +1,6 @@
 #pragma once
 
+#include "debug.h"
 #include <windows.h>
 #include <lm.h>
 #include <iostream>

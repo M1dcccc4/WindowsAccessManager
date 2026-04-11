@@ -2,6 +2,7 @@
 #include "language.h"
 #include "logger.h"
 #include "pwd_manager.h"
+#include "debug.h"
 #include <windows.h>
 #include <shellapi.h>
 #include <iostream>
@@ -66,8 +67,8 @@ std::string W2N(const std::wstring& wideStr) {
 	WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, buffer.data(), len, nullptr, nullptr);
 	return std::string(buffer.data());
 }
-#define VP(pwd) PwdManager::Instance().Verify(N2W(GetName()).c_str(), N2W(GetDomain()).c_str(), pwd)
-#define NP Logger::Instance().AllowNoPassword(Logger::Instance().GetLastAllowed())
+#define Verify(pwd) PwdManager::Instance().Verify(N2W(GetName()).c_str(), N2W(GetDomain()).c_str(), pwd)
+#define isBypass Logger::Instance().AllowNoPassword(Logger::Instance().GetLastAllowed())
 
 // 全局变量
 static bool isSilent{ false };
@@ -120,11 +121,11 @@ std::wstring NoEcho() {
 
 
 bool VerifyPassword() {
-	if (!VP(NoEcho().c_str())) {
+	if (!Verify(NoEcho().c_str())) {
 		std::cout << FS("wam.error.retry") << std::endl;
-		if (!VP(NoEcho().c_str())) {
+		if (!Verify(NoEcho().c_str())) {
 			std::cout << FS("wam.error.retry") << std::endl;
-			if (!VP(NoEcho().c_str())) return false;
+			if (!Verify(NoEcho().c_str())) return false;
 			else return true;
 		}
 		else return true;
@@ -200,7 +201,7 @@ int main(int argc, char* argv[]) {
 	// 初始化语言管理器
 	LanguageManager::initialize();
 	Logger::Initialize();
-
+	Debug("This is a debug text.");
 	if (argc < 2) {
 		ShowHelp();
 		return 1;
@@ -312,9 +313,14 @@ int main(int argc, char* argv[]) {
 				parameters += args[i];
 			}
 		}
-
-		if (!config.isNoPassword() && !NP && !ignoreTimestamp) {
-
+		std::cout << "config.isNoPassword() :" << bool(config.isNoPassword()) << std::endl
+				  << "isBypass:" << bool(isBypass) << std::endl
+				  << "ignoreTimestamp:" << bool(ignoreTimestamp) << std::endl;
+		if (config.isNoPassword() || (isBypass && !ignoreTimestamp)) {
+			// 执行命令（无密码）
+			LB(command);
+			return RunElevatedCommand(command, parameters) ? 0 : 1;
+		} else {
 			if (!VerifyPassword()) {
 				LD(command);
 				std::cout << FS("wam.error.verifyFailed") << std::endl;
@@ -326,10 +332,6 @@ int main(int argc, char* argv[]) {
 				return RunElevatedCommand(command, parameters) ? 0 : 1;
 			}
 
-		} else {
-			// 执行命令（无密码）
-			LB(command);
-			return RunElevatedCommand(command, parameters) ? 0 : 1;
 		}
 
 	} else {

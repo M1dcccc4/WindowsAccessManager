@@ -1,3 +1,4 @@
+#include "debug.h"
 #include "pwd_manager.h"
 #include <Windows.h>
 #include <iostream>

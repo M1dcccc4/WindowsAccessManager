@@ -1,3 +1,4 @@
+#include "debug.h"
 #include "logger.h"
 #include "language.h"
 #include <Windows.h>
@@ -74,7 +75,7 @@ void Logger::Initialize() {
 		logPath = ".\\";
 	}
 	Logger::filePath = logPath;
-	Logger::logFile.open(logPath + "\\log.txt", std::ios::app);
+	Logger::logFile.open(Logger::filePath + "\\log.txt", std::ios::app);
 	if (!Logger::Instance().logFile.is_open()) {
 		std::cerr << FS1("wam.error.openLog", logPath + "\\log.txt") << std::endl;
 	}
@@ -142,8 +143,8 @@ bool Logger::AllowNoPassword(std::string timeStr)
 
 void Logger::RefreshTimestamp(std::string timeStr)
 {
-	std::cout << timeStr << std::endl;
-	//timeStamp << timeStr;
+	std::ofstream timeStamp(Logger::filePath + "\\timestamp");
+	timeStamp << timeStr;
 }
 
 

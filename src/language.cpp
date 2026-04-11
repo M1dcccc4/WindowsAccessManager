@@ -1,3 +1,4 @@
+#include "debug.h"
 #include "language.h"
 #include <windows.h>
 #include <fstream>

@@ -1,4 +1,5 @@
 #include "config.h"
+#include "debug.h"
 #include "language.h"
 #include <fstream>
 #include <vector>
